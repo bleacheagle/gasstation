@@ -386,7 +386,6 @@
         </div>
     </div>
 </div>
-
 <script>
     const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
     const { createClient } = supabase;
@@ -477,7 +476,7 @@
                 nextTick(() => { resizeAllTextareas(); });
             };
 
-            // ★ 加入了除錯彈出視窗與 Proxy 清理的全新自動儲存功能 ★
+            // 自動儲存雲端 (加入標籤修復)
             let saveTimeout = null;
             watch(employees, (newVal) => {
                 if (!client || !currentSheetId.value || newVal.length === 0) return;
@@ -486,13 +485,18 @@
                 
                 saveTimeout = setTimeout(async () => {
                     try {
-                        // 剝除 Vue 的響應式代理外殼，變成純粹的 JSON 資料，防止 Supabase 讀取錯誤
                         const cleanData = JSON.parse(JSON.stringify(newVal));
+                        
+                        // ★ 關鍵修復：強制把目前所在的月份 ID，貼到每一筆要存檔的員工資料上！
+                        cleanData.forEach(emp => {
+                            emp.sheet_id = currentSheetId.value;
+                        });
+
                         const { error } = await client.from('employees').upsert(cleanData);
                         
                         if (error) {
                             console.error("雲端存檔失敗:", error);
-                            alert(`🚨 資料存不進去資料庫！\n錯誤原因：${error.message}\n\n請把這個視窗截圖或複製貼上給我！`);
+                            alert(`🚨 資料存不進去資料庫！\n錯誤原因：${error.message}`);
                         }
                     } catch (err) {
                         console.error("系統執行錯誤:", err);
@@ -610,5 +614,6 @@
         }
     }).mount('#app');
 </script>
+
 </body>
 </html>
