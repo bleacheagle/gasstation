@@ -477,12 +477,29 @@
                 nextTick(() => { resizeAllTextareas(); });
             };
 
+            // ★ 加入了除錯彈出視窗與 Proxy 清理的全新自動儲存功能 ★
             let saveTimeout = null;
             watch(employees, (newVal) => {
                 if (!client || !currentSheetId.value || newVal.length === 0) return;
                 isSaving.value = true;
                 clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(async () => { await client.from('employees').upsert(newVal); isSaving.value = false; }, 1000);
+                
+                saveTimeout = setTimeout(async () => {
+                    try {
+                        // 剝除 Vue 的響應式代理外殼，變成純粹的 JSON 資料，防止 Supabase 讀取錯誤
+                        const cleanData = JSON.parse(JSON.stringify(newVal));
+                        const { error } = await client.from('employees').upsert(cleanData);
+                        
+                        if (error) {
+                            console.error("雲端存檔失敗:", error);
+                            alert(`🚨 資料存不進去資料庫！\n錯誤原因：${error.message}\n\n請把這個視窗截圖或複製貼上給我！`);
+                        }
+                    } catch (err) {
+                        console.error("系統執行錯誤:", err);
+                    } finally {
+                        isSaving.value = false;
+                    }
+                }, 1000);
             }, { deep: true });
 
             const val = (v) => Number(v) || 0;
@@ -552,16 +569,11 @@
             const sumCustom = () => employees.value.reduce((sum, r) => sum + getCustomSum(r), 0);
             const sumLeaveUntaken = () => employees.value.reduce((sum, r) => sum + val(getLeaveUntaken(r)), 0);
 
-            // ★ 新增：請假自動扣薪計算公式 ★
             const recalcLeave = (emp) => {
-                // 自動抓取時薪（月薪 ÷ 240），如果只有填時薪就抓時薪
                 const hourlyRate = emp.baseMon ? Number((emp.baseMon / 240).toFixed(3)) : (val(emp.baseHr) || 0);
                 if (hourlyRate > 0) {
-                    // 事假 (H1)：扣全薪 (時薪 × 1.0)
                     const d1 = val(emp.leaveH1) * hourlyRate;
                     emp.ded1 = d1 > 0 ? Math.round(d1) : null;
-                    
-                    // 病假 (H2)：扣半薪 (時薪 × 0.5)
                     const d2 = val(emp.leaveH2) * hourlyRate * 0.5;
                     emp.ded2 = d2 > 0 ? Math.round(d2) : null;
                 } else {
@@ -570,7 +582,6 @@
                 }
             };
 
-            // ★ 加班自動計算公式 ★
             const recalcPay = (emp) => {
                 const hourlyRate = emp.baseMon ? Number((emp.baseMon / 240).toFixed(3)) : (val(emp.baseHr) || 0);
                 if (hourlyRate > 0) {
@@ -599,6 +610,5 @@
         }
     }).mount('#app');
 </script>
-
 </body>
 </html>
