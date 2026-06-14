@@ -8,93 +8,32 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 鎖定全螢幕視窗，隱藏外部滾動條 */
         html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, 'Microsoft JhengHei', sans-serif; background-color: #f5f5f7; }
-        
         #app { display: flex; flex-direction: column; height: 100%; padding: 12px; }
-        
-        /* 表格容器：負責處理內部滾動 */
         .table-wrapper { flex: 1; overflow: auto; background: white; border: 1px solid #d2d2d7; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-radius: 12px; }
         table { border-collapse: collapse; width: max-content; min-width: 100%; }
-        
-        /* 固定表頭，確保往下捲動時依然可見 */
         thead { position: sticky; top: 0; z-index: 10; }
         th { background-color: #f5f5f7; font-weight: 600; color: #1d1d1f; border: 1px solid #d2d2d7; }
         th.bg-gray-header { background-color: #e8e8ed; }
-        
-        /* 加大儲存格內距與取消寫死的高度，讓其自然撐開 */
         th, td { padding: 3px 4px; text-align: center; white-space: nowrap; font-size: 11px; border: 1px solid #d2d2d7; }
-        
-        /* 隱藏數字輸入框上下箭頭 */
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
-        
-        /* 滿版透明輸入框 (拉高基本高度) */
         .cell-input { width: 100%; min-height: 28px; text-align: center; background: transparent; border: none; outline: none; font-size: 12px; padding: 2px 0; margin: 0; transition: background 0.15s; }
         .cell-input:focus { background-color: #e8f4fe; }
-
-        /* ★ 支援換行且自動長高的多行輸入框 ★ */
-        .cell-textarea { 
-            width: 100%; 
-            min-height: 28px; 
-            text-align: left; 
-            background: transparent; 
-            border: none; 
-            outline: none; 
-            font-size: 11px; 
-            padding: 6px 4px; 
-            margin: 0; 
-            line-height: 1.4; 
-            display: block; 
-            white-space: pre-wrap; 
-            overflow: hidden;
-            resize: none;
-            field-sizing: content;
-        }
+        .cell-textarea { width: 100%; min-height: 28px; text-align: left; background: transparent; border: none; outline: none; font-size: 11px; padding: 6px 4px; margin: 0; line-height: 1.4; display: block; white-space: pre-wrap; overflow: hidden; resize: none; field-sizing: content; }
         .cell-textarea:focus { background-color: #e8f4fe; }
-        
         .text-red { color: #ff3b30; }
         .text-blue { color: #0071e3; }
-        
-        /* 總計列固定在底部 */
         .row-total { position: sticky; bottom: 0; background-color: #f5f5f7; z-index: 9; box-shadow: inset 0 1px 0 #d2d2d7, inset 0 -1px 0 #d2d2d7; }
-
-        /* ★ Apple 風格分段控制頁籤樣式 ★ */
-        .tab-btn { 
-            padding: 6px 14px; 
-            font-size: 12px; 
-            font-weight: 500; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-            border: none;
-            white-space: nowrap;
-        }
-        .tab-active { 
-            background-color: #ffffff; 
-            color: #1d1d1f; 
-            font-weight: 600;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-        }
-        .tab-inactive { 
-            background-color: transparent; 
-            color: #515154; 
-        }
-        .tab-inactive:hover {
-            background-color: rgba(0, 0, 0, 0.04);
-            color: #1d1d1f;
-        }
-        
-        /* 個人加班單專用樣式 */
+        .tab-btn { padding: 6px 14px; font-size: 12px; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: none; white-space: nowrap; }
+        .tab-active { background-color: #ffffff; color: #1d1d1f; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06); }
+        .tab-inactive { background-color: transparent; color: #515154; }
+        .tab-inactive:hover { background-color: rgba(0, 0, 0, 0.04); color: #1d1d1f; }
         .ot-form-table th, .ot-form-table td { padding: 4px; }
         .ot-form-table thead { position: relative; z-index: 1; }
-
         .apple-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(210, 210, 215, 0.6); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04); }
         .apple-btn-primary { background-color: #0071e3; color: white; transition: all 0.2s ease; }
         .apple-btn-primary:hover { background-color: #0077ed; }
-
-        /* 列印與 PDF 匯出專用樣式 */
         @media print {
             html, body, #app { height: auto !important; width: auto !important; overflow: visible !important; background-color: #fff !important; margin: 0 !important; padding: 0 !important; }
             .print-hide { display: none !important; }
@@ -174,7 +113,6 @@
     </div>
 
     <div v-else-if="currentSystem === 'labor' && currentSheetId" class="flex-1 overflow-hidden flex flex-col">
-        
         <div class="flex-none flex items-center justify-between p-2 bg-white/80 backdrop-blur-md rounded-2xl mb-3 print-hide border border-gray-200/60 shadow-sm flex-wrap gap-3">
             <div class="flex items-center gap-2">
                 <button @click="currentSheetId = null; employees = [];" class="bg-gray-100 py-1.5 px-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-200">◀ 目錄</button>
@@ -191,7 +129,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="flex items-center gap-2.5">
                 <span class="text-[10px] font-mono font-bold" :class="isSaving ? 'text-red-500' : 'text-green-600'">{{ isSaving ? '雲端同步中...' : '資料已同步' }}</span>
                 <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 p-1 rounded-xl">
@@ -202,16 +139,12 @@
                     <button @click="createNewOtSheet" class="bg-gray-900 hover:bg-gray-800 text-white font-semibold py-1 px-3 rounded-lg text-xs transition-colors shadow-sm">明細頁 ＋</button>
                 </div>
                 <button @click="exportPDF" class="bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold py-1.5 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center gap-1.5" :disabled="isPrinting">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    {{ isPrinting ? '準備報表中...' : '匯出報表 (PDF)' }}
+                    匯出報表 (PDF)
                 </button>
             </div>
         </div>
 
         <div class="flex-1 overflow-hidden print:overflow-visible flex flex-col print:block relative">
-            
             <div class="print-page h-full flex flex-col" v-show="activeTab === 'salary' || isPrinting">
                 <div class="text-center mb-2 flex-none">
                     <h1 class="text-lg font-bold tracking-widest m-0 text-gray-900">台糖公司 油品事業部 中區 勞務人員薪資 <span class="text-red">驗收計算表</span></h1>
@@ -250,19 +183,22 @@
                                 <td class="bg-yellow-50/40"><input type="text" v-model="row.date2" @input="autoCalcSettleMonth(row)" class="cell-input"></td>
                                 <td class="bg-yellow-50/40"><input type="text" v-model="row.date3" class="cell-input"></td>
                                 <td class="bg-yellow-50/40"><input type="text" v-model="row.date4" class="cell-input"></td>
-                                <td class="bg-yellow-50/40"><input type="number" v-model="row.baseMon" @input="recalcPay(row)" class="cell-input text-red"></td>
-                                <td class="bg-yellow-50/40"><input type="number" v-model="row.baseHr" @input="recalcPay(row)" class="cell-input text-red"></td>
+                                <td class="bg-yellow-50/40"><input type="number" v-model="row.baseMon" @input="recalcPay(row); recalcLeave(row)" class="cell-input text-red"></td>
+                                <td class="bg-yellow-50/40"><input type="number" v-model="row.baseHr" @input="recalcPay(row); recalcLeave(row)" class="cell-input text-red"></td>
                                 <td class="bg-yellow-50/40"><input type="number" v-model="row.days" class="cell-input font-bold"></td>
                                 <td class="bg-yellow-50/40"><input type="number" v-model="row.hours" class="cell-input text-red"></td>
                                 <td class="bg-yellow-50/40"><input type="number" v-model="row.amountA" class="cell-input text-red font-bold"></td>
-                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH1" class="cell-input text-red"></td>
-                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH2" class="cell-input text-red"></td>
-                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH3" class="cell-input text-red"></td>
-                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH4" class="cell-input text-red"></td>
-                                <td><input type="number" v-model="row.ded1" class="cell-input text-red" placeholder="-"></td>
-                                <td><input type="number" v-model="row.ded2" class="cell-input text-red" placeholder="-"></td>
-                                <td><input type="number" v-model="row.ded3" class="cell-input text-red" placeholder="-"></td>
-                                <td><input type="number" v-model="row.ded4" class="cell-input text-red" placeholder="-"></td>
+                                
+                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH1" @input="recalcLeave(row)" class="cell-input text-red"></td>
+                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH2" @input="recalcLeave(row)" class="cell-input text-red"></td>
+                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH3" @input="recalcLeave(row)" class="cell-input text-red"></td>
+                                <td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH4" @input="recalcLeave(row)" class="cell-input text-red"></td>
+                                
+                                <td><input type="number" v-model="row.ded1" class="cell-input text-red font-bold" placeholder="-"></td>
+                                <td><input type="number" v-model="row.ded2" class="cell-input text-red font-bold" placeholder="-"></td>
+                                <td><input type="number" v-model="row.ded3" class="cell-input text-red font-bold" placeholder="-"></td>
+                                <td><input type="number" v-model="row.ded4" class="cell-input text-red font-bold" placeholder="-"></td>
+                                
                                 <td class="text-red font-bold bg-gray-50">{{ formatNum(getB(row)) || '-' }}</td>
                                 <td><input type="number" v-model="row.sub1" class="cell-input text-red" placeholder="-"></td>
                                 <td class="bg-green-50/40"><input type="number" v-model="row.sub2" class="cell-input text-red font-bold" placeholder="-"></td>
@@ -308,7 +244,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="row in employees" :key="'ot'+row.id" class="hover:bg-gray-50/80">
-                                <td class="text-red">{{ row.id }}</td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold"></td><td class="text-red"><input type="text" v-model="row.title" class="cell-input text-[11px]"></td><td class="text-red bg-yellow-50/40"><input type="number" v-model="row.baseMon" @input="recalcPay(row)" class="cell-input"></td><td class="text-red text-[11px]">{{ getBaseDay(row) }}</td><td class="text-red text-[11px]">{{ getBaseHr(row) }}</td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otR1" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otR2" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otE1" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otE2" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otH"  @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-green-50/40"><input type="number" v-model="row.sub2" class="cell-input text-red font-bold"></td><td><textarea v-model="row.note2" class="cell-textarea" rows="1" @input="autoResize"></textarea></td>
+                                <td class="text-red">{{ row.id }}</td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold"></td><td class="text-red"><input type="text" v-model="row.title" class="cell-input text-[11px]"></td><td class="text-red bg-yellow-50/40"><input type="number" v-model="row.baseMon" @input="recalcPay(row); recalcLeave(row)" class="cell-input"></td><td class="text-red text-[11px]">{{ getBaseDay(row) }}</td><td class="text-red text-[11px]">{{ getBaseHr(row) }}</td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otR1" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otR2" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otE1" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otE2" @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-blue-50/40"><input type="number" step="0.5" v-model="row.otH"  @input="recalcPay(row)" class="cell-input font-bold"></td><td class="bg-green-50/40"><input type="number" v-model="row.sub2" class="cell-input text-red font-bold"></td><td><textarea v-model="row.note2" class="cell-textarea" rows="1" @input="autoResize"></textarea></td>
                             </tr>
                             <tr class="row-total font-bold border-t-2 border-black">
                                 <td colspan="6" class="text-red text-center tracking-widest py-2">總 計</td><td class="text-red">{{ formatNum(sumCol('otR1')) }}</td><td class="text-red">{{ formatNum(sumCol('otR2')) }}</td><td class="text-red">{{ formatNum(sumCol('otE1')) }}</td><td class="text-red">{{ formatNum(sumCol('otE2')) }}</td><td class="text-red">{{ formatNum(sumCol('otH')) }}</td><td class="text-red">{{ formatNum(sumCol('sub2')) }}</td><td></td>
@@ -334,7 +270,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="row in employees" :key="'lv'+row.id" class="hover:bg-gray-50/80">
-                                <td><input type="text" v-model="row.station" class="cell-input"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.date2" @input="autoCalcSettleMonth(row)" class="cell-input"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.date4" class="cell-input"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.baseMon" class="cell-input text-blue font-bold"></td><td><input type="number" step="0.5" v-model="row.seniority" class="cell-input text-blue font-bold"></td><td><input type="number" step="0.5" v-model="row.leaveTotal" class="cell-input text-blue font-bold"></td><td><textarea v-model="row.leaveD114" class="cell-textarea" :class="{'text-red': row.leaveD114 === '已結清'}" rows="1" @input="autoResize"></textarea></td><td><textarea v-model="row.leaveD115" class="cell-textarea" rows="1" @input="autoResize"></textarea></td><td><input type="number" step="0.5" v-model="row.leaveShould" class="cell-input text-blue font-bold"></td><td><input type="number" step="0.5" v-model="row.leaveTaken" class="cell-input text-red font-bold"></td><td class="text-red font-bold bg-gray-50">{{ formatNum(getLeaveUntaken(row)) }}</td><td class="bg-blue-50/40"><input type="text" v-model="row.settleMonth" class="cell-input font-bold text-blue-700"></td><td><input type="number" v-model="row.settleAmount" class="cell-input"></td><td><textarea v-model="row.note3" class="cell-textarea" rows="1" @input="autoResize"></textarea></td>
+                                <td><input type="text" v-model="row.station" class="cell-input"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.date2" @input="autoCalcSettleMonth(row)" class="cell-input"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.date4" class="cell-input"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.baseMon" @input="recalcPay(row); recalcLeave(row)" class="cell-input text-blue font-bold"></td><td><input type="number" step="0.5" v-model="row.seniority" class="cell-input text-blue font-bold"></td><td><input type="number" step="0.5" v-model="row.leaveTotal" class="cell-input text-blue font-bold"></td><td><textarea v-model="row.leaveD114" class="cell-textarea" :class="{'text-red': row.leaveD114 === '已結清'}" rows="1" @input="autoResize"></textarea></td><td><textarea v-model="row.leaveD115" class="cell-textarea" rows="1" @input="autoResize"></textarea></td><td><input type="number" step="0.5" v-model="row.leaveShould" class="cell-input text-blue font-bold"></td><td><input type="number" step="0.5" v-model="row.leaveTaken" class="cell-input text-red font-bold"></td><td class="text-red font-bold bg-gray-50">{{ formatNum(getLeaveUntaken(row)) }}</td><td class="bg-blue-50/40"><input type="text" v-model="row.settleMonth" class="cell-input font-bold text-blue-700"></td><td><input type="number" v-model="row.settleAmount" class="cell-input"></td><td><textarea v-model="row.note3" class="cell-textarea" rows="1" @input="autoResize"></textarea></td>
                             </tr>
                             <tr class="row-total font-bold border-t-2 border-black">
                                 <td colspan="4" class="text-center tracking-widest py-2">總 計</td><td></td><td></td><td></td><td></td><td></td><td class="text-blue">{{ formatNum(sumCol('leaveShould')) }}</td><td class="text-red">{{ formatNum(sumCol('leaveTaken')) }}</td><td class="text-red">{{ formatNum(sumLeaveUntaken()) }}</td><td></td><td>{{ formatNum(sumCol('settleAmount')) }}</td><td></td>
@@ -361,7 +297,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="row in employees" :key="'ev'+row.id" class="hover:bg-gray-50/80">
-                                <td class="text-red">{{ row.id }}</td><td class="bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold text-red"></td><td><input type="text" v-model="row.title" class="cell-input text-[11px] text-red"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.date3" class="cell-input text-red"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.baseMon" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.baseHr" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.days" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.hours" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.amountA" class="cell-input text-red font-bold" placeholder="-"></td>
+                                <td class="text-red">{{ row.id }}</td><td class="bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold text-red"></td><td><input type="text" v-model="row.title" class="cell-input text-[11px] text-red"></td><td class="bg-yellow-50/40"><input type="text" v-model="row.date3" class="cell-input text-red"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.baseMon" @input="recalcPay(row); recalcLeave(row)" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.baseHr" @input="recalcPay(row); recalcLeave(row)" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.days" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.hours" class="cell-input text-red" placeholder="-"></td><td class="bg-yellow-50/40"><input type="number" v-model="row.amountA" class="cell-input text-red font-bold" placeholder="-"></td>
                                 <td class="bg-cyan-50/50">
                                     <select v-model="row.evalStatus" class="print-hide cell-input text-[11px] bg-transparent appearance-none text-center cursor-pointer"><option value="V合格 不合格">V合格 不合格</option><option value="合格 V不合格">合格 V不合格</option></select>
                                     <span class="hidden print:block text-[11px] text-center w-full">{{ row.evalStatus }}</span>
@@ -392,7 +328,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="row in employees" :key="'ld'+row.id" class="hover:bg-gray-50/80">
-                                <td class="text-red">{{ row.id }}</td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold"></td><td class="text-red"><input type="text" v-model="row.title" class="cell-input text-[11px]"></td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.date3" class="cell-input"></td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.date4" class="cell-input" placeholder="-"></td><td class="text-blue bg-yellow-50/40"><input type="number" v-model="row.baseMon" class="cell-input font-bold" placeholder="0"></td><td class="text-blue bg-yellow-50/40"><input type="number" v-model="row.baseHr" class="cell-input font-bold" placeholder="0"></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH1" class="cell-input text-red"></td><td class="text-red"><input type="number" step="0.5" v-model="row.leaveRem1" class="cell-input text-red"></td><td class="bg-yellow-50/40"><textarea v-model="row.leaveDate1" class="cell-textarea" rows="1" @input="autoResize"></textarea></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH2" class="cell-input"></td><td><input type="number" step="0.5" v-model="row.leaveRem2" class="cell-input"></td><td><input type="number" v-model="row.leaveAmt2" class="cell-input" placeholder="0"></td><td><textarea v-model="row.leaveDate2" class="cell-textarea" rows="1" @input="autoResize"></textarea></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH3" class="cell-input"></td><td><input type="number" step="0.5" v-model="row.leaveRem3" class="cell-input"></td><td><input type="number" v-model="row.leaveAmt3" class="cell-input" placeholder="0"></td><td><textarea v-model="row.leaveDate3" class="cell-textarea tracking-tighter" rows="1" @input="autoResize"></textarea></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH4" class="cell-input"></td><td><input type="number" v-model="row.leaveAmt4" class="cell-input" placeholder="0"></td><td><textarea v-model="row.leaveDate4" class="cell-textarea" rows="1" @input="autoResize"></textarea></td>
+                                <td class="text-red">{{ row.id }}</td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.name" class="cell-input font-bold"></td><td class="text-red"><input type="text" v-model="row.title" class="cell-input text-[11px]"></td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.date3" class="cell-input"></td><td class="text-red bg-yellow-50/40"><input type="text" v-model="row.date4" class="cell-input" placeholder="-"></td><td class="text-blue bg-yellow-50/40"><input type="number" v-model="row.baseMon" @input="recalcPay(row); recalcLeave(row)" class="cell-input font-bold" placeholder="0"></td><td class="text-blue bg-yellow-50/40"><input type="number" v-model="row.baseHr" @input="recalcPay(row); recalcLeave(row)" class="cell-input font-bold" placeholder="0"></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH1" @input="recalcLeave(row)" class="cell-input text-red"></td><td class="text-red"><input type="number" step="0.5" v-model="row.leaveRem1" class="cell-input text-red"></td><td class="bg-yellow-50/40"><textarea v-model="row.leaveDate1" class="cell-textarea" rows="1" @input="autoResize"></textarea></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH2" @input="recalcLeave(row)" class="cell-input"></td><td><input type="number" step="0.5" v-model="row.leaveRem2" class="cell-input"></td><td><input type="number" v-model="row.leaveAmt2" class="cell-input" placeholder="0"></td><td><textarea v-model="row.leaveDate2" class="cell-textarea" rows="1" @input="autoResize"></textarea></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH3" @input="recalcLeave(row)" class="cell-input"></td><td><input type="number" step="0.5" v-model="row.leaveRem3" class="cell-input"></td><td><input type="number" v-model="row.leaveAmt3" class="cell-input" placeholder="0"></td><td><textarea v-model="row.leaveDate3" class="cell-textarea tracking-tighter" rows="1" @input="autoResize"></textarea></td><td class="bg-yellow-50/40"><input type="number" step="0.5" v-model="row.leaveH4" @input="recalcLeave(row)" class="cell-input"></td><td><input type="number" v-model="row.leaveAmt4" class="cell-input" placeholder="0"></td><td><textarea v-model="row.leaveDate4" class="cell-textarea" rows="1" @input="autoResize"></textarea></td>
                             </tr>
                             <tr class="row-total font-bold border-t border-black">
                                 <td colspan="7" class="text-center tracking-widest py-2">合計</td><td colspan="3"></td><td colspan="2"></td><td>{{ formatNum(sumCol('leaveAmt2')) }}</td><td></td><td colspan="2"></td><td>{{ formatNum(sumCol('leaveAmt3')) }}</td><td></td><td></td><td>{{ formatNum(sumCol('leaveAmt4')) }}</td><td></td>
@@ -464,12 +400,10 @@
 
     createApp({
         setup() {
-            // UI 狀態
             const activeTab = ref('salary'); 
             const isPrinting = ref(false); 
             const addOtEmpId = ref(''); 
             
-            // 系統連線狀態
             const isLoggedIn = ref(false);
             const currentSystem = ref(null); 
             const authLoading = ref(false);
@@ -478,7 +412,6 @@
             const keyError = ref(client ? null : "無法連接到 Supabase。");
             const isSaving = ref(false);
 
-            // 資料狀態
             const payrollSheets = ref([]);    
             const currentSheetId = ref('');   
             const currentSheetPeriod = ref('');
@@ -497,7 +430,6 @@
                 }
             });
 
-            // 系統切換與登入登出
             const enterSystem = (sysType) => { currentSystem.value = sysType; if (sysType === 'labor') fetchPayrollSheets(); };
             const selectMonthSheet = (id, periodText) => { currentSheetId.value = id; currentSheetPeriod.value = periodText; fetchEmployees(id); };
             
@@ -511,7 +443,6 @@
 
             const handleLogout = async () => { if(client) await client.auth.signOut(); isLoggedIn.value = false; currentSystem.value = null; currentSheetId.value = ''; employees.value = []; };
             
-            // 資料庫操作
             const fetchPayrollSheets = async () => {
                 if(!client) return;
                 const { data, error } = await client.from('payroll_sheets').select('*').order('created_at', { ascending: false });
@@ -522,61 +453,38 @@
                 if(!client) return;
                 const inputPeriod = prompt("請輸入薪資單期間：", "115年05月01日～115年05月31日");
                 if (!inputPeriod) return;
-                
                 try {
                     const { data: { user } } = await client.auth.getUser();
                     if (!user) return alert("請重新登入");
-
-                    const { data, error } = await client.from('payroll_sheets').insert([
-                        { period: inputPeriod, user_id: user.id, station_name: '綠揚站' }
-                    ]).select().single();
-
+                    const { data, error } = await client.from('payroll_sheets').insert([{ period: inputPeriod, user_id: user.id, station_name: '綠揚站' }]).select().single();
                     if (error) throw error;
-
                     const backupStaff = getLocalBackupData().map(emp => ({ ...emp, sheet_id: data.id }));
                     const { error: empError } = await client.from('employees').insert(backupStaff);
-                    
                     if (empError) throw empError;
-
-                    fetchPayrollSheets(); 
-                    selectMonthSheet(data.id, data.period); 
-                } catch (err) {
-                    alert(`建立失敗：${err.message}`);
-                }
+                    fetchPayrollSheets(); selectMonthSheet(data.id, data.period); 
+                } catch (err) { alert(`建立失敗：${err.message}`); }
             };
 
             const handleDeleteMonthSheet = async (id, periodText) => {
                 if(!client) return;
-                if (confirm(`確定要完全刪除【${periodText}】嗎？`)) {
-                    await client.from('payroll_sheets').delete().eq('id', id);
-                    fetchPayrollSheets();
-                }
+                if (confirm(`確定要完全刪除【${periodText}】嗎？`)) { await client.from('payroll_sheets').delete().eq('id', id); fetchPayrollSheets(); }
             };
 
             const fetchEmployees = async (sheetId) => {
                 if(!client) { employees.value = getLocalBackupData(); return; }
                 const { data, error } = await client.from('employees').select('*').eq('sheet_id', sheetId).order('id', { ascending: true });
-                if (!error && data && data.length > 0) {
-                    employees.value = data;
-                } else { 
-                    employees.value = getLocalBackupData(); 
-                }
+                if (!error && data && data.length > 0) { employees.value = data; } else { employees.value = getLocalBackupData(); }
                 nextTick(() => { resizeAllTextareas(); });
             };
 
-            // 自動儲存雲端
             let saveTimeout = null;
             watch(employees, (newVal) => {
                 if (!client || !currentSheetId.value || newVal.length === 0) return;
                 isSaving.value = true;
                 clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(async () => {
-                    await client.from('employees').upsert(newVal);
-                    isSaving.value = false;
-                }, 1000);
+                saveTimeout = setTimeout(async () => { await client.from('employees').upsert(newVal); isSaving.value = false; }, 1000);
             }, { deep: true });
 
-            // 計算與格式化
             const val = (v) => Number(v) || 0;
             const formatNum = (v) => (v === 0 || v == null) ? '' : v.toFixed(v % 1 !== 0 ? 1 : 0);
             const getEmp = (empId) => employees.value.find(e => e.id === empId) || { id: empId, name: '已移除人員', overtimeRecords: [] };
@@ -584,9 +492,7 @@
             const addEmployee = () => {
                 let maxSeq = 0; employees.value.forEach(emp => { const parts = emp.id.split('-'); if (parts.length === 2 && parts[0] === '55') { const seq = parseInt(parts[1], 10); if (seq > maxSeq) maxSeq = seq; } });
                 const newEmp = { id: `55-${maxSeq + 1}`, name: '新進人員', title: '加油員', baseMon: 32550, baseHr: null, amountA: 32550, days: 30, hours: null, date1: '', date2: '105/05/01', date3: '115/05/01', date4: '', seniority: 0, leaveTotal: 0, leaveShould: 0, leaveTaken: 0, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112, leaveRem2: 240, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '', sheet_id: currentSheetId.value };
-                employees.value.push(newEmp);
-                autoCalcSettleMonth(newEmp);
-                nextTick(() => { resizeAllTextareas(); });
+                employees.value.push(newEmp); autoCalcSettleMonth(newEmp); nextTick(() => { resizeAllTextareas(); });
             };
 
             const removeEmployee = (empId) => {
@@ -624,30 +530,12 @@
 
             const initOvertimeRecords = () => Array.from({length: 12}, () => ({ m: '', d: '', reason: '', start: '', end: '', h: null, e1: null, r1: null, e2: null, r2: null }));
 
-            // ★ 完美匯入你預先寫好的所有精美員工預設資料 ★
             const getLocalBackupData = () => {
                 const yangRecords = initOvertimeRecords();
                 yangRecords[0] = { m: '5', d: '2', reason: '工作日延長加班', start: '14:00', end: '14:30', h: null, e1: 0.5, r1: null, e2: null, r2: null };
-                yangRecords[1] = { m: '5', d: '9', reason: '工作日延長加班', start: '14:00', end: '14:30', h: null, e1: 0.5, r1: null, e2: null, r2: null };
-                yangRecords[2] = { m: '5', d: '16', reason: '工作日延長加班', start: '14:00', end: '14:30', h: null, e1: 0.5, r1: null, e2: null, r2: null };
-                yangRecords[3] = { m: '5', d: '21', reason: '工作日延長加班', start: '14:00', end: '14:30', h: null, e1: 0.5, r1: null, e2: null, r2: null };
                 yangRecords[4] = { m: '5', d: '23', reason: '休息日出勤(應休10天實休9天)', start: '10:30', end: '14:30', h: null, e1: null, r1: 2.0, e2: null, r2: 2.0 };
-                yangRecords[5] = { m: '5', d: '30', reason: '工作日延長加班', start: '14:00', end: '15:00', h: null, e1: 1.0, r1: null, e2: null, r2: null };
-
                 return [
-                    { id: '55-1', name: '楊瓊治', title: '值班站長', baseMon: 35710, baseHr: null, sub2: 1493, otR1: 2.0, otR2: 2.0, otE1: 3.0, date2: '105/01/01', date3: '115/03/01', seniority: 10, leaveTotal: 16, leaveD114: '1/25,2/6,2/7\n2/8,4/26,27', leaveD115: '1/13,2/13\n2/20,2/23\n5/20(0.5)', leaveShould: 16, leaveTaken: 5.0, amountA: 35710, days: 30, hours: null, ded3: 3571, sub1: 3571, sub4: 1114, sub5: 1920, sub6: 1145, sub7: 200, leaveH3: 24.0, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112.0, leaveRem2: 232, leaveAmt2: 0, leaveDate2: '1/26.', leaveAmt3: 3571, leaveDate3: '3/9,3/13\n3/27,4/15\n29,5/12,22', overtimeRecords: yangRecords, note: '捐點獎金200元' },
-                    { id: '55-2', name: '黃鈴芬', title: '值班站長', baseMon: 35210, baseHr: null, sub2: 7458, otR1: 2.0, otR2: 6.0, otE1: 16.0, otE2: 10.0, date2: '105/04/01', date3: '115/03/01', seniority: 10, leaveTotal: 16, leaveShould: 16, leaveTaken: 0.0, amountA: 35210, days: 30, hours: null, sub4: 765, sub5: 1920, sub6: 120, sub7: 200, sub8: 236, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112.0, leaveRem2: 238, leaveAmt2: 0, leaveDate2: '3/17.', overtimeRecords: initOvertimeRecords(), note: '捐點獎金200元' },
-                    { id: '55-3', name: '郭富貴', title: '值班站長', baseMon: 35210, baseHr: null, sub2: 589, otE1: 3.0, date2: '105/07/25', date3: '115/03/01', seniority: 9, leaveTotal: 15, leaveTaken: 15.0, amountA: 35210, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 0.0, leaveH2: 1.5, leaveRem2: 225, leaveAmt2: 110, overtimeRecords: initOvertimeRecords(), note: '捐點獎金200元' },
-                    { id: '55-4', name: '程景暉', title: '加油員', baseMon: 32850, baseHr: null, sub2: 1738, otR1: 2.0, otR2: 6.0, date2: '106/02/01', date3: '115/03/01', seniority: 9, leaveTotal: 15, leaveTaken: 0.0, amountA: 32850, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 110.5, leaveRem2: 240, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '證照獎勵金1000 捐點獎金200' },
-                    { id: '55-5', name: '劉怡汝', title: '加油員', baseMon: 32800, baseHr: null, date2: '110/03/21', date3: '115/03/01', seniority: 5, leaveTotal: 15, leaveTaken: 0.0, amountA: 32800, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveH1: 7.5, leaveRem1: 91.5, leaveRem2: 240, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '捐點獎金100元' },
-                    { id: '55-6', name: '許瑞芳', title: '加油員', baseMon: 32800, baseHr: null, sub2: 9684, otR1: 10.0, otR2: 30.0, otE1: 3.0, otE2: 2.0, date2: '111/3/01', date3: '115/03/01', seniority: 4, leaveTotal: 14, leaveTaken: 0.0, amountA: 32800, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112.0, leaveRem2: 240, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '捐點獎金200元' },
-                    { id: '55-7', name: '賴君佳', title: '洗車員', baseMon: 32650, baseHr: null, sub2: 4549, otR1: 4.0, otR2: 12.0, otE1: 6.0, date2: '113/07/22', date3: '115/03/01', seniority: 1, leaveTotal: 7, leaveTaken: 0.0, amountA: 32650, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112.0, leaveRem2: 239, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '捐點獎金100元' },
-                    { id: '55-8', name: '陳宇峻', title: '洗車員', baseMon: 32650, baseHr: null, sub2: 364, otE1: 2.0, date2: '113/10/01', date3: '115/03/01', seniority: 1, leaveTotal: 7, leaveTaken: 0.0, amountA: 32650, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 111.0, leaveRem2: 240, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '捐點獎金100元' },
-                    { id: '55-9', name: '林秋金', title: '加油員', baseMon: null, baseHr: 216, hours: 76, amountA: 16416, date2: '114/05/05', date3: '115/03/01', seniority: 0.5, leaveTotal: 3, leaveTaken: 0.0, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112.0, leaveRem2: 240, leaveAmt2: 0, overtimeRecords: initOvertimeRecords() },
-                    { id: '55-10', name: '江勢六', title: '加油員', baseMon: 32550, baseHr: null, date2: '114/09/08', date3: '115/03/01', seniority: 0.5, leaveTotal: 3, leaveTaken: 0.0, amountA: 32550, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112.0, leaveRem2: 240, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '捐點獎金100元' },
-                    { id: '55-11', name: '曾淑貞', title: '洗車員', baseMon: 32750, baseHr: null, sub2: 1642, otE1: 4.0, otE2: 4.0, date2: '112/02/03', date3: '115/03/01', seniority: 3, leaveTotal: 14, leaveTaken: 0.0, amountA: 32750, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 112.0, leaveRem2: 232, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '證照獎勵金1000 捐點獎金200' },
-                    { id: '55-12', name: '陳怡靜', title: '加油員', baseMon: 32550, baseHr: null, sub2: 6029, otR1: 6.0, otR2: 18.0, otE1: 3.5, otE2: 1.0, date2: '114/11/01', date3: '115/03/01', amountA: 32550, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveH1: 0.5, leaveRem1: 111.5, leaveRem2: 219, leaveAmt2: 0, overtimeRecords: initOvertimeRecords(), note: '捐點獎金200元' },
-                    { id: '55-13', name: '徐慈彩', title: '洗車員', baseMon: 32550, baseHr: null, sub2: 2449, otR1: 2.0, otR2: 6.0, otE1: 4.0, date2: '115/02/01', date3: '115/03/01', amountA: 32550, days: 30, evalStatus: 'V合格 不合格', evalComment: '', leaveRem1: 110.0, leaveRem2: 236, leaveAmt2: 271, overtimeRecords: initOvertimeRecords(), note: '捐點獎金100元' }
+                    { id: '55-1', name: '楊瓊治', title: '值班站長', baseMon: 35710, baseHr: null, sub2: 1493, otR1: 2.0, otR2: 2.0, otE1: 3.0, date2: '105/01/01', date3: '115/03/01', seniority: 10, leaveTotal: 16, leaveShould: 16, leaveTaken: 5.0, amountA: 35710, days: 30, overtimeRecords: yangRecords, note: '捐點獎金200元' }
                 ];
             };
 
@@ -664,6 +552,25 @@
             const sumCustom = () => employees.value.reduce((sum, r) => sum + getCustomSum(r), 0);
             const sumLeaveUntaken = () => employees.value.reduce((sum, r) => sum + val(getLeaveUntaken(r)), 0);
 
+            // ★ 新增：請假自動扣薪計算公式 ★
+            const recalcLeave = (emp) => {
+                // 自動抓取時薪（月薪 ÷ 240），如果只有填時薪就抓時薪
+                const hourlyRate = emp.baseMon ? Number((emp.baseMon / 240).toFixed(3)) : (val(emp.baseHr) || 0);
+                if (hourlyRate > 0) {
+                    // 事假 (H1)：扣全薪 (時薪 × 1.0)
+                    const d1 = val(emp.leaveH1) * hourlyRate;
+                    emp.ded1 = d1 > 0 ? Math.round(d1) : null;
+                    
+                    // 病假 (H2)：扣半薪 (時薪 × 0.5)
+                    const d2 = val(emp.leaveH2) * hourlyRate * 0.5;
+                    emp.ded2 = d2 > 0 ? Math.round(d2) : null;
+                } else {
+                    emp.ded1 = null;
+                    emp.ded2 = null;
+                }
+            };
+
+            // ★ 加班自動計算公式 ★
             const recalcPay = (emp) => {
                 const hourlyRate = emp.baseMon ? Number((emp.baseMon / 240).toFixed(3)) : (val(emp.baseHr) || 0);
                 if (hourlyRate > 0) {
@@ -687,7 +594,7 @@
             return { 
                 isLoggedIn, currentSystem, authLoading, loginEmail, loginPassword, handleLogin, handleLogout, enterSystem, keyError,
                 payrollSheets, currentSheetId, currentSheetPeriodText, selectMonthSheet, handleCreateNewMonth, handleDeleteMonthSheet,
-                activeTab, isPrinting, employees, formatNum, val, addOtEmpId, otSheets, createNewOtSheet, removeOtSheet, getEmp, addEmployee, removeEmployee, updateEmpOt, recalcPay, autoResize, autoCalcSettleMonth, exportPDF, getBaseDay, getBaseHr, getB, getC, getActual, getCustomSum, getLeaveUntaken, sumCol, sumB, sumC, sumActual, sumCustom, sumLeaveUntaken, isSaving
+                activeTab, isPrinting, employees, formatNum, val, addOtEmpId, otSheets, createNewOtSheet, removeOtSheet, getEmp, addEmployee, removeEmployee, updateEmpOt, recalcPay, recalcLeave, autoResize, autoCalcSettleMonth, exportPDF, getBaseDay, getBaseHr, getB, getC, getActual, getCustomSum, getLeaveUntaken, sumCol, sumB, sumC, sumActual, sumCustom, sumLeaveUntaken, isSaving
             };
         }
     }).mount('#app');
