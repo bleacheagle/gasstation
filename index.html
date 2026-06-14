@@ -396,18 +396,48 @@
                 if (!error) payrollSheets.value = data || [];
             };
 
-            const handleCreateNewMonth = async () => {
-                if(!client) return;
-                const inputPeriod = prompt("請輸入薪資單期間：", "115年05月01日～115年05月31日");
-                if (!inputPeriod) return;
-                const { data: { user } } = await client.auth.getUser();
-                const { data, error } = await client.from('payroll_sheets').insert([{ period: inputPeriod, user_id: user.id, station_name: '綠揚站' }]).select().single();
-                if (!error) { 
-                    const backupStaff = getLocalBackupData().map(emp => ({ ...emp, sheet_id: data.id }));
-                    await client.from('employees').insert(backupStaff);
-                    fetchPayrollSheets(); selectMonthSheet(data.id, data.period); 
-                }
-            };
+    const handleCreateNewMonth = async () => {
+    if(!client) return;
+    const inputPeriod = prompt("請輸入薪資單期間：", "115年05月01日～115年05月31日");
+    if (!inputPeriod) return;
+    
+    try {
+        const { data: { user }, error: userError } = await client.auth.getUser();
+        if (userError || !user) {
+            alert("無法取得使用者憑證，請嘗試重新登入。");
+            return;
+        }
+
+        // 1. 新增薪資表
+        const { data, error } = await client.from('payroll_sheets').insert([
+            { period: inputPeriod, user_id: user.id, station_name: '綠揚站' }
+        ]).select().single();
+
+        if (error) {
+            console.error("薪資表建立失敗:", error);
+            alert(`建立薪資表失敗：${error.message}`);
+            return;
+        }
+
+        // 2. 匯入預設員工資料
+        const backupStaff = getLocalBackupData().map(emp => ({ ...emp, sheet_id: data.id }));
+        const { error: empError } = await client.from('employees').insert(backupStaff);
+
+        if (empError) {
+            console.error("員工資料匯入失敗:", empError);
+            alert(`人員寫入失敗：${empError.message}`);
+            return;
+        }
+
+        // 3. 成功後刷新畫面
+        fetchPayrollSheets(); 
+        selectMonthSheet(data.id, data.period); 
+
+    } catch (err) {
+        console.error("系統執行異常:", err);
+        alert(`系統發生異常：${err.message}`);
+    }
+};
 
             const handleDeleteMonthSheet = async (id, periodText) => {
                 if(!client) return;
