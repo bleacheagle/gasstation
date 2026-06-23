@@ -35,9 +35,10 @@
         .apple-btn-primary { background-color: #0071e3; color: white; transition: all 0.2s ease; }
         .apple-btn-primary:hover { background-color: #0077ed; }
         @media print {
-            html, body, #app { height: auto !important; width: auto !important; overflow: visible !important; background-color: #fff !important; margin: 0 !important; padding: 0 !important; }
+            html, body, #app { height: auto !important; width: auto !important; overflow: visible !important; background-color: #fff !important; margin: 0 !important; padding: 0 !important; display: block !important; }
             .print-hide { display: none !important; }
-            .print-page { display: block !important; height: auto !important; page-break-after: always; margin-bottom: 20px; }
+            /* 加入 page-break-inside: avoid 防止蓋章區跑到下一頁 */
+            .print-page { display: block !important; height: auto !important; page-break-after: always; page-break-inside: avoid; margin-bottom: 0px !important; }
             .print-page:last-of-type { page-break-after: auto; }
             .print-table-wrapper { overflow: visible !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -48,7 +49,10 @@
             tr { page-break-inside: avoid; page-break-after: auto; }
             th, td { padding: 3px 4px !important; border: 1px solid #9ca3af !important; } 
             .salary-table { table-layout: fixed !important; width: 1545px !important; }
-            @page { size: A4 landscape; margin: 10mm; }
+            /* 強制解除 Vue 與 Tailwind 造成的裁剪隱藏 */
+            .overflow-hidden { overflow: visible !important; }
+            /* 邊距縮減為 5mm，讓版面有更多垂直空間塞下蓋章區 */
+            @page { size: A4 landscape; margin: 5mm; }
         }
     </style>
 </head>
@@ -112,7 +116,7 @@
         </div>
     </div>
 
-    <div v-else-if="currentSystem === 'labor' && currentSheetId" class="flex-1 overflow-hidden flex flex-col">
+    <div v-else-if="currentSystem === 'labor' && currentSheetId" class="flex-1 overflow-hidden flex flex-col print:overflow-visible print:block print:h-auto">
         <div class="flex-none flex items-center justify-between p-2 bg-white/80 backdrop-blur-md rounded-2xl mb-3 print-hide border border-gray-200/60 shadow-sm flex-wrap gap-3">
             <div class="flex items-center gap-2">
                 <button @click="currentSheetId = null; employees = [];" class="bg-gray-100 py-1.5 px-3 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-200">◀ 目錄</button>
@@ -144,8 +148,9 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-hidden print:overflow-visible flex flex-col print:block relative">
-            <div class="print-page h-full flex flex-col" v-show="activeTab === 'salary' || isPrinting">
+        <div class="flex-1 overflow-hidden print:overflow-visible flex flex-col print:block print:h-auto relative">
+            
+            <div class="print-page h-full flex flex-col print:block print:h-auto" v-show="activeTab === 'salary' || isPrinting">
                 <div class="text-center mb-2 flex-none">
                     <h1 class="text-lg font-bold tracking-widest m-0 text-gray-900">台糖公司 油品事業部 中區 勞務人員薪資 <span class="text-red">驗收計算表</span></h1>
                     <div class="flex justify-between text-xs px-2 mt-1 items-center">
@@ -221,12 +226,12 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="flex-none grid mt-2 bg-white text-xs print:mt-4 print:break-inside-avoid grid-cols-3 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
+                <div class="flex-none grid mt-2 bg-white text-xs print:mt-1 print:break-inside-avoid grid-cols-3 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
                     <div class="p-3 h-14 text-sm border-r border-gray-100">審核確認 製表人(駐站代表):</div><div class="p-3 h-14 text-sm border-r border-gray-100">站長:</div><div class="p-3 h-14 text-sm">管理師:</div>
                 </div>
             </div>
 
-            <div class="print-page h-full flex flex-col" v-show="activeTab === 'overtime' || isPrinting">
+            <div class="print-page h-full flex flex-col print:block print:h-auto" v-show="activeTab === 'overtime' || isPrinting">
                 <div class="text-center mb-2 flex-none">
                     <div class="text-sm font-bold text-red m-0 text-center tracking-widest pb-1 mb-1">期間: {{ currentSheetPeriodText }}</div>
                     <div class="flex justify-between text-xs px-2 mt-1">
@@ -252,12 +257,12 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="flex-none grid mt-2 bg-white text-xs print:mt-4 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
+                <div class="flex-none grid mt-2 bg-white text-xs print:mt-1 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
                     <div class="p-3 h-16 text-sm border-r border-gray-100">駐站代表:</div><div class="p-3 h-16 text-sm border-r border-gray-100">站長:</div><div class="p-3 h-16 text-sm border-r border-gray-100">管理師:</div><div class="p-3 h-16 text-sm">部門主管:</div>
                 </div>
             </div>
 
-            <div class="print-page h-full flex flex-col" v-show="activeTab === 'leave' || isPrinting">
+            <div class="print-page h-full flex flex-col print:block print:h-auto" v-show="activeTab === 'leave' || isPrinting">
                 <div class="text-center mb-2 flex-none">
                     <h1 class="text-lg font-bold tracking-widest m-0 text-gray-900">台糖公司油品中區勞務人員.特休假 <span class="text-red">驗收清單</span></h1>
                     <div class="flex justify-between text-xs px-2 mt-1"><span class="text-gray-600 font-medium">站名: 綠揚站</span><span class="text-red font-bold">期間: {{ currentSheetPeriodText }}</span><span style="width: 80px;"></span></div>
@@ -278,12 +283,12 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="flex-none grid mt-2 bg-white text-xs print:mt-4 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
+                <div class="flex-none grid mt-2 bg-white text-xs print:mt-1 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
                     <div class="p-3 h-16 text-sm border-r border-gray-100">駐站代表:</div><div class="p-3 h-16 text-sm border-r border-gray-100">站長:</div><div class="p-3 h-16 text-sm border-r border-gray-100">管理師:</div><div class="p-3 h-16 text-sm">部門主管:</div>
                 </div>
             </div>
 
-            <div class="print-page h-full flex flex-col" v-show="activeTab === 'eval' || isPrinting">
+            <div class="print-page h-full flex flex-col print:block print:h-auto" v-show="activeTab === 'eval' || isPrinting">
                 <div class="text-center mb-2 flex-none">
                     <h1 class="text-lg font-bold tracking-widest m-0 text-gray-900">加油站勞務人員出勤記錄暨考勤 <span class="text-red">驗收表</span></h1>
                     <div class="flex justify-between text-xs px-2 mt-1 text-red"><span class="text-gray-600 font-medium">站名: 綠揚站</span><span class="font-bold">期間: {{ currentSheetPeriodText }}</span><span style="width: 80px;"></span></div>
@@ -310,12 +315,12 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="flex-none grid mt-2 bg-white text-xs print:mt-4 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
+                <div class="flex-none grid mt-2 bg-white text-xs print:mt-1 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
                     <div class="p-3 h-16 text-sm border-r border-gray-100">經辦:</div><div class="p-3 h-16 text-sm border-r border-gray-100">管理師:</div><div class="p-3 h-16 text-sm border-r border-gray-100">部門主管:</div><div class="p-3 h-16 text-sm"></div>
                 </div>
             </div>
 
-            <div class="print-page h-full flex flex-col" v-show="activeTab === 'leaveData' || isPrinting">
+            <div class="print-page h-full flex flex-col print:block print:h-auto" v-show="activeTab === 'leaveData' || isPrinting">
                 <div class="text-center mb-2 flex-none">
                     <h1 class="text-lg font-bold tracking-widest m-0 text-gray-900">勞務人員請假資料清單 <span class="text-red">驗收表</span></h1>
                     <div class="flex justify-between text-xs px-2 mt-1 text-red"><span class="text-gray-600 font-medium">站名: 綠揚站</span><span class="font-bold">期間: {{ currentSheetPeriodText }}</span><span style="width: 80px;"></span></div>
@@ -336,12 +341,12 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="flex-none grid mt-2 bg-white text-xs print:mt-4 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
+                <div class="flex-none grid mt-2 bg-white text-xs print:mt-1 print:break-inside-avoid grid-cols-4 rounded-xl border border-gray-200/60 shadow-sm overflow-hidden">
                     <div class="p-3 h-16 text-sm border-r border-gray-100">審核確認 經辦:</div><div class="p-3 h-16 text-sm border-r border-gray-100">站長:</div><div class="p-3 h-16 text-sm border-r border-gray-100">管理師:</div><div class="p-3 h-16 text-sm">部門主管:</div>
                 </div>
             </div>
 
-            <div v-for="(sheet, index) in otSheets" :key="'sheetPage-'+sheet.id" class="print-page h-full flex flex-col" v-show="activeTab === sheet.id || isPrinting">
+            <div v-for="(sheet, index) in otSheets" :key="'sheetPage-'+sheet.id" class="print-page h-full flex flex-col print:block print:h-auto" v-show="activeTab === sheet.id || isPrinting">
                 <div class="flex-1 overflow-auto p-4 bg-gray-50 flex justify-center print:bg-white print:p-0 print:overflow-visible">
                     <div class="border border-black max-w-4xl w-full text-[13px] bg-white shadow-lg print:shadow-none print:w-full print:max-w-none print:break-inside-avoid">
                         <div class="text-center py-4 border-b border-black">
@@ -476,7 +481,6 @@
                 nextTick(() => { resizeAllTextareas(); });
             };
 
-            // 自動儲存雲端 (加入標籤修復)
             let saveTimeout = null;
             watch(employees, (newVal) => {
                 if (!client || !currentSheetId.value || newVal.length === 0) return;
@@ -486,8 +490,6 @@
                 saveTimeout = setTimeout(async () => {
                     try {
                         const cleanData = JSON.parse(JSON.stringify(newVal));
-                        
-                        // ★ 關鍵修復：強制把目前所在的月份 ID，貼到每一筆要存檔的員工資料上！
                         cleanData.forEach(emp => {
                             emp.sheet_id = currentSheetId.value;
                         });
