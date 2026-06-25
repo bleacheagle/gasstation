@@ -37,7 +37,6 @@
         @media print {
             html, body, #app { height: auto !important; width: auto !important; overflow: visible !important; background-color: #fff !important; margin: 0 !important; padding: 0 !important; display: block !important; }
             .print-hide { display: none !important; }
-            /* 加入 page-break-inside: avoid 防止蓋章區跑到下一頁 */
             .print-page { display: block !important; height: auto !important; page-break-after: always; page-break-inside: avoid; margin-bottom: 0px !important; }
             .print-page:last-of-type { page-break-after: auto; }
             .print-table-wrapper { overflow: visible !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; }
@@ -49,9 +48,7 @@
             tr { page-break-inside: avoid; page-break-after: auto; }
             th, td { padding: 3px 4px !important; border: 1px solid #9ca3af !important; } 
             .salary-table { table-layout: fixed !important; width: 1545px !important; }
-            /* 強制解除 Vue 與 Tailwind 造成的裁剪隱藏 */
             .overflow-hidden { overflow: visible !important; }
-            /* 邊距縮減為 5mm，讓版面有更多垂直空間塞下蓋章區 */
             @page { size: A4 landscape; margin: 5mm; }
         }
     </style>
@@ -455,18 +452,91 @@
 
             const handleCreateNewMonth = async () => {
                 if(!client) return;
-                const inputPeriod = prompt("請輸入薪資單期間：", "115年05月01日～115年05月31日");
+                
+                const inputPeriod = prompt("請輸入薪資單期間：", "115年06月01日～115年06月30日");
                 if (!inputPeriod) return;
+                
                 try {
                     const { data: { user } } = await client.auth.getUser();
                     if (!user) return alert("請重新登入");
-                    const { data, error } = await client.from('payroll_sheets').insert([{ period: inputPeriod, user_id: user.id, station_name: '綠揚站' }]).select().single();
+
+                    // 1. 取得上個月（最新建立一筆）的表單員工資料
+                    let previousStaff = [];
+                    if (payrollSheets.value.length > 0) {
+                        const latestSheetId = payrollSheets.value[0].id;
+                        const { data: lastMonthEmployees, error: fetchErr } = await client.from('employees')
+                            .select('*')
+                            .eq('sheet_id', latestSheetId)
+                            .order('id', { ascending: true });
+
+                        if (!fetchErr && lastMonthEmployees && lastMonthEmployees.length > 0) {
+                            previousStaff = lastMonthEmployees;
+                        }
+                    }
+
+                    // 2. 建立新月份表單
+                    const { data, error } = await client.from('payroll_sheets')
+                        .insert([{ period: inputPeriod, user_id: user.id, station_name: '綠揚站' }])
+                        .select().single();
                     if (error) throw error;
-                    const backupStaff = getLocalBackupData().map(emp => ({ ...emp, sheet_id: data.id }));
-                    const { error: empError } = await client.from('employees').insert(backupStaff);
+
+                    // 3. 處理人員資料 (有上月複製基本資料並變動歸零，無則採預設備份)
+                    let staffToInsert = [];
+                    if (previousStaff.length > 0) {
+                        staffToInsert = previousStaff.map(emp => {
+                            const newEmp = { ...emp, sheet_id: data.id };
+                            
+                            // 刪除可能導致主鍵或唯一約束衝突的系統欄位
+                            delete newEmp.created_at;
+                            delete newEmp.updated_at;
+                            
+                            // 保留基本結構，清空變動欄位
+                            newEmp.days = 30; 
+                            newEmp.hours = null;
+                            newEmp.amountA = emp.baseMon || null;
+                            
+                            // 加班重置
+                            newEmp.otR1 = null; newEmp.otR2 = null; 
+                            newEmp.otE1 = null; newEmp.otE2 = null; 
+                            newEmp.otH = null;
+                            
+                            // 請假扣款重置
+                            newEmp.leaveH1 = null; newEmp.leaveH2 = null; 
+                            newEmp.leaveH3 = null; newEmp.leaveH4 = null;
+                            newEmp.leaveDate1 = ''; newEmp.leaveDate2 = ''; 
+                            newEmp.leaveDate3 = ''; newEmp.leaveDate4 = '';
+                            newEmp.leaveAmt2 = null; newEmp.leaveAmt3 = null; newEmp.leaveAmt4 = null;
+                            newEmp.ded1 = null; newEmp.ded2 = null; 
+                            newEmp.ded3 = null; newEmp.ded4 = null;
+                            
+                            // 補貼、獎金重置
+                            newEmp.sub1 = null; newEmp.sub2 = null; newEmp.sub3 = null; 
+                            newEmp.sub4 = null; newEmp.sub5 = null; newEmp.sub6 = null; 
+                            newEmp.sub7 = null; newEmp.sub8 = null; newEmp.sub9 = null;
+                            
+                            // 各項備註及簽核說明重置
+                            newEmp.note = ''; newEmp.note2 = ''; newEmp.note3 = ''; 
+                            newEmp.evalComment = '';
+                            
+                            // 明細表單歸零
+                            newEmp.overtimeRecords = initOvertimeRecords();
+                            
+                            return newEmp;
+                        });
+                    } else {
+                        staffToInsert = getLocalBackupData().map(emp => ({ ...emp, sheet_id: data.id }));
+                    }
+
+                    // 4. 寫入員工名單到新表
+                    const { error: empError } = await client.from('employees').insert(staffToInsert);
                     if (empError) throw empError;
-                    fetchPayrollSheets(); selectMonthSheet(data.id, data.period); 
-                } catch (err) { alert(`建立失敗：${err.message}`); }
+
+                    // 5. 更新目錄畫面
+                    fetchPayrollSheets(); 
+                    selectMonthSheet(data.id, data.period);
+                } catch (err) { 
+                    alert(`建立失敗：${err.message}`); 
+                }
             };
 
             const handleDeleteMonthSheet = async (id, periodText) => {
@@ -495,7 +565,6 @@
                         });
 
                         const { error } = await client.from('employees').upsert(cleanData);
-                        
                         if (error) {
                             console.error("雲端存檔失敗:", error);
                             alert(`🚨 資料存不進去資料庫！\n錯誤原因：${error.message}`);
@@ -583,8 +652,7 @@
                     const d2 = val(emp.leaveH2) * hourlyRate * 0.5;
                     emp.ded2 = d2 > 0 ? Math.round(d2) : null;
                 } else {
-                    emp.ded1 = null;
-                    emp.ded2 = null;
+                    emp.ded1 = null; emp.ded2 = null;
                 }
             };
 
